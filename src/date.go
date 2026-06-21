@@ -33,7 +33,10 @@ type Interface interface {
 	After(Interface) bool
 	Equal(Interface) bool
 	AddDays(n int) Result.Interface
+	AddMonths(n int) Result.Interface
 	DaysBetween(Interface) int
+	IsLeapYear() bool
+	DayOfYear() int
 	IsNull() bool
 }
 
@@ -178,12 +181,42 @@ func (d data) AddDays(n int) Result.Interface {
 }
 
 /*
+AddMonths returns a Result whose payload is a new Date n calendar months later
+(n may be negative). The operation never panics and never returns nil.
+
+It uses Go's time.Time.AddDate(0, n, 0) semantics, which normalises an
+overflowing day-of-month: e.g. adding one month to 31 January 2026 yields
+3 March 2026 (28 February + 3 days) rather than a non-existent 31 February.
+*/
+func (d data) AddMonths(n int) Result.Interface {
+	shifted := d.value.AddDate(0, n, 0)
+	return Result.New(
+		Result.WithPayload(fromGo(shifted)),
+	)
+}
+
+/*
 DaysBetween returns the signed number of days from the receiver to other
 (positive when other is later, negative when earlier).
 */
 func (d data) DaysBetween(other Interface) int {
 	delta := toMidnight(other).Sub(d.value)
 	return int(delta.Hours() / 24)
+}
+
+/*
+IsLeapYear reports whether the date's calendar year is a leap year.
+*/
+func (d data) IsLeapYear() bool {
+	year := d.value.Year()
+	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
+}
+
+/*
+DayOfYear returns the 1-based day of the year (1–366), where 1 is 1 January.
+*/
+func (d data) DayOfYear() int {
+	return d.value.YearDay()
 }
 
 /*
@@ -213,8 +246,9 @@ Null returns the Null-Object variant of Date.
 
 It satisfies Interface so callers never have to test for a bare nil: its
 components are zero, its string form is empty, its comparisons are false, its
-AddDays yields a Result wrapping another null Date, DaysBetween is zero, and
-IsNull() returns true.
+AddDays and AddMonths each yield a Result wrapping another null Date,
+DaysBetween is zero, IsLeapYear is false, DayOfYear is zero, and IsNull()
+returns true.
 */
 func Null() Interface {
 	return &null{}
@@ -258,7 +292,21 @@ func (n null) AddDays(int) Result.Interface {
 	)
 }
 
+func (n null) AddMonths(int) Result.Interface {
+	return Result.New(
+		Result.WithPayload(Null()),
+	)
+}
+
 func (n null) DaysBetween(Interface) int {
+	return 0
+}
+
+func (n null) IsLeapYear() bool {
+	return false
+}
+
+func (n null) DayOfYear() int {
 	return 0
 }
 

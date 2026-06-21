@@ -105,6 +105,38 @@ var _ = ginkgo.Describe("Date", func() {
 			earlier := Date.FromYMD(2026, 6, 11).Payload().(Date.Interface)
 			gomega.Expect(d.DaysBetween(earlier)).To(gomega.Equal(-10))
 		})
+		ginkgo.It("AddMonths shifts a Date forward", func() {
+			r := d.AddMonths(3)
+			gomega.Expect(r.HasError()).To(gomega.BeFalse())
+			gomega.Expect(r.Payload().(Date.Interface).ToGoString()).To(gomega.Equal("2026-09-21"))
+		})
+		ginkgo.It("AddMonths shifts a Date backward with a negative count", func() {
+			r := d.AddMonths(-6)
+			gomega.Expect(r.HasError()).To(gomega.BeFalse())
+			gomega.Expect(r.Payload().(Date.Interface).ToGoString()).To(gomega.Equal("2025-12-21"))
+		})
+		ginkgo.It("AddMonths normalises an overflowing day-of-month", func() {
+			jan31 := Date.FromYMD(2026, 1, 31).Payload().(Date.Interface)
+			r := jan31.AddMonths(1)
+			gomega.Expect(r.HasError()).To(gomega.BeFalse())
+			gomega.Expect(r.Payload().(Date.Interface).ToGoString()).To(gomega.Equal("2026-03-03"))
+		})
+	})
+
+	ginkgo.Describe("calendar", func() {
+		ginkgo.It("IsLeapYear is true for a leap year", func() {
+			d := Date.FromYMD(2024, 1, 1).Payload().(Date.Interface)
+			gomega.Expect(d.IsLeapYear()).To(gomega.BeTrue())
+		})
+		ginkgo.It("IsLeapYear is false for a common year", func() {
+			d := Date.FromYMD(2026, 1, 1).Payload().(Date.Interface)
+			gomega.Expect(d.IsLeapYear()).To(gomega.BeFalse())
+		})
+		ginkgo.It("DayOfYear is 1-based from 1 January", func() {
+			gomega.Expect(Date.FromYMD(2026, 1, 1).Payload().(Date.Interface).DayOfYear()).To(gomega.Equal(1))
+			gomega.Expect(Date.FromYMD(2026, 12, 31).Payload().(Date.Interface).DayOfYear()).To(gomega.Equal(365))
+			gomega.Expect(Date.FromYMD(2024, 12, 31).Payload().(Date.Interface).DayOfYear()).To(gomega.Equal(366))
+		})
 	})
 
 	ginkgo.Describe("the Null-Object variant", func() {
@@ -144,6 +176,17 @@ var _ = ginkgo.Describe("Date", func() {
 		})
 		ginkgo.It("DaysBetween is zero", func() {
 			gomega.Expect(n.DaysBetween(Date.FromYMD(2026, 1, 1).Payload().(Date.Interface))).To(gomega.Equal(0))
+		})
+		ginkgo.It("AddMonths returns a Result whose payload is a null Date", func() {
+			r := n.AddMonths(5)
+			gomega.Expect(r.HasError()).To(gomega.BeFalse())
+			gomega.Expect(r.Payload().(Date.Interface).IsNull()).To(gomega.BeTrue())
+		})
+		ginkgo.It("IsLeapYear is false", func() {
+			gomega.Expect(n.IsLeapYear()).To(gomega.BeFalse())
+		})
+		ginkgo.It("DayOfYear is zero", func() {
+			gomega.Expect(n.DayOfYear()).To(gomega.Equal(0))
 		})
 	})
 })
